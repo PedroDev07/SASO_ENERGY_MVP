@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { PROFILES, profileOf, useStore, type Profile } from '../state/store';
+import { LANGS, useT } from '../i18n';
 
 export function Brand({ small }: { small?: boolean }) {
   return (
@@ -29,11 +30,42 @@ export const BellIcon = () => (
   </svg>
 );
 
+const GlobeIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+  </svg>
+);
+
+/* ---------- Seletor de idioma ---------- */
+
+export function LangSwitch() {
+  const { dispatch } = useStore();
+  const { t, lang } = useT();
+  return (
+    <div className="lang" role="group" aria-label={t('Idioma')}>
+      <GlobeIcon />
+      {LANGS.map(l => (
+        <button
+          key={l.id}
+          className={lang === l.id ? 'on' : ''}
+          aria-pressed={lang === l.id}
+          title={l.name}
+          lang={l.id === 'zh' ? 'zh-CN' : l.id}
+          onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { lang: l.id } })}
+        >
+          {l.short}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /* ---------- Modal ---------- */
 
 export function Modal({ title, onClose, children, footer, width }: {
   title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; width?: number;
 }) {
+  const { t } = useT();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -44,7 +76,7 @@ export function Modal({ title, onClose, children, footer, width }: {
       <div className="modal" role="dialog" aria-modal="true" aria-label={title} style={width ? { width } : undefined}>
         <header>
           <h2>{title}</h2>
-          <button className="close" onClick={onClose} aria-label="Fechar">×</button>
+          <button className="close" onClick={onClose} aria-label={t('Fechar')}>×</button>
         </header>
         {children}
         {footer && <footer>{footer}</footer>}
@@ -57,6 +89,7 @@ export function Modal({ title, onClose, children, footer, width }: {
 
 export function Toasts() {
   const { toasts, dismiss } = useStore();
+  const { t } = useT();
   const go = useGo();
   const { pathname } = useLocation();
   const seen = useRef(pathname);
@@ -64,22 +97,22 @@ export function Toasts() {
   useEffect(() => {
     if (seen.current === pathname) return;
     seen.current = pathname;
-    toasts.forEach(t => dismiss(t.id));
+    toasts.forEach(x => dismiss(x.id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
   return (
     <div className="toasts" aria-live="polite">
-      {toasts.map(t => (
-        <div key={t.id} className={`toast ${t.tone}`}>
+      {toasts.map(x => (
+        <div key={x.id} className={`toast ${x.tone}`}>
           <div className="txt">
-            {t.text}
-            {t.action && (
+            {x.text}
+            {x.action && (
               <div>
-                <button className="act" onClick={() => { dismiss(t.id); go(t.action!.to); }}>{t.action.label} →</button>
+                <button className="act" onClick={() => { dismiss(x.id); go(x.action!.to); }}>{x.action.label} →</button>
               </div>
             )}
           </div>
-          <button className="close" onClick={() => dismiss(t.id)} aria-label="Fechar aviso">×</button>
+          <button className="close" onClick={() => dismiss(x.id)} aria-label={t('Fechar aviso')}>×</button>
         </div>
       ))}
     </div>
@@ -88,8 +121,9 @@ export function Toasts() {
 
 /* ---------- Sino de avisos ---------- */
 
-export function Bell({ profile, empty = 'Nenhum aviso novo.' }: { profile: Profile; empty?: string }) {
+export function Bell({ profile }: { profile: Profile }) {
   const { state, dispatch } = useStore();
+  const { t, tv } = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const mine = state.notices.filter(n => n.to === profile);
@@ -111,18 +145,18 @@ export function Bell({ profile, empty = 'Nenhum aviso novo.' }: { profile: Profi
 
   return (
     <div className="bell" ref={ref}>
-      <button onClick={toggle} aria-label={`Avisos${unread ? ` (${unread} novos)` : ''}`} aria-expanded={open}>
+      <button onClick={toggle} aria-label={unread ? t('Avisos ({n} novos)', { n: unread }) : t('Avisos')} aria-expanded={open}>
         <BellIcon />
       </button>
       {unread > 0 && <span className="badge">{unread}</span>}
       {open && (
         <div className="panel">
-          <h3>Avisos</h3>
-          {mine.length === 0 && <p className="muted" style={{ padding: '4px 10px 10px', margin: 0 }}>{empty}</p>}
+          <h3>{t('Avisos')}</h3>
+          {mine.length === 0 && <p className="muted" style={{ padding: '4px 10px 10px', margin: 0 }}>{t('Nenhum aviso novo.')}</p>}
           {mine.map(n => (
             <div key={n.id} className={`n ${n.read ? '' : 'unread'}`}>
-              <strong>{n.title}</strong>
-              <p>{n.body}</p>
+              <strong>{t(n.title)}</strong>
+              <p>{tv(n.body, n.vars)}</p>
               <time>{n.at}</time>
             </div>
           ))}
@@ -171,13 +205,14 @@ const SUBTITLE: Record<Profile, string> = { integrador: 'Nível: Certificado', s
 
 export function Sidebar({ profile }: { profile: Profile }) {
   const { state, dispatch } = useStore();
+  const { t } = useT();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const name = state.session?.name ?? PROFILES[profile].name;
   const logout = () => { dispatch({ type: 'LOGOUT' }); navigate('/'); };
 
   return (
-    <nav className={`side no-print side-${profile}`} aria-label="Menu principal">
+    <nav className={`side no-print side-${profile}`} aria-label={t('Menu principal')}>
       <Brand />
       {NAV[profile].map(n => (
         <NavLink
@@ -186,29 +221,28 @@ export function Sidebar({ profile }: { profile: Profile }) {
           end={n.end}
           className={({ isActive }) => (isActive || (n.match && pathname.startsWith(n.match)) ? 'active' : '')}
         >
-          {n.label}
+          {t(n.label)}
         </NavLink>
       ))}
-      <button className="side-logout mobile-only" onClick={logout}>Sair</button>
+      <button className="side-logout mobile-only" onClick={logout}>{t('Sair')}</button>
       <div className="user">
-        <strong>{name}</strong>
-        <div style={{ marginTop: 4 }}>{SUBTITLE[profile]}</div>
-        <button className="side-logout" onClick={logout}>Sair</button>
+        <strong>{t(name)}</strong>
+        <div style={{ marginTop: 4 }}>{t(SUBTITLE[profile])}</div>
+        <button className="side-logout" onClick={logout}>{t('Sair')}</button>
       </div>
     </nav>
   );
 }
 
-/** Estrutura comum de todas as páginas logadas: menu lateral + barra de utilidades + conteúdo. */
-export function AppShell({ profile, children, extra, wide }: { profile: Profile; children: ReactNode; extra?: ReactNode; wide?: boolean }) {
-  const { state } = useStore();
+/** Estrutura comum de todas as páginas logadas: menu lateral + barra superior + conteúdo. */
+export function AppShell({ profile, children, wide }: { profile: Profile; children: ReactNode; wide?: boolean }) {
   return (
     <div className="shell page">
       <Sidebar profile={profile} />
       <div className="content">
         <div className="utilbar no-print">
-          {extra}
-          <Bell profile={profile} empty={state.settings.lang === 'en' && profile === 'fornecedor' ? 'No new notifications.' : 'Nenhum aviso novo.'} />
+          <LangSwitch />
+          <Bell profile={profile} />
         </div>
         <main className={`main ${wide ? '' : 'centered'}`}>{children}</main>
       </div>
@@ -229,6 +263,7 @@ const SCRIPT: [string, string, string][] = [
 
 export function DemoBar() {
   const { state, dispatch, toast } = useStore();
+  const { t } = useT();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const go = useGo();
@@ -241,62 +276,63 @@ export function DemoBar() {
   return (
     <>
       {panel === 'decisoes' && (
-        <div className="decisions" role="dialog" aria-label="Pontos em aberto">
+        <div className="decisions" role="dialog" aria-label={t('Pontos em aberto')}>
           <div className="between">
-            <h3>Pontos em aberto · veja as duas opções</h3>
-            <button className="link" onClick={() => setPanel(null)}>Fechar</button>
+            <h3>{t('Pontos em aberto · veja as duas opções')}</h3>
+            <button className="link" onClick={() => setPanel(null)}>{t('Fechar')}</button>
           </div>
           <div className="stack" style={{ gap: 6 }}>
-            <span className="small" style={{ fontWeight: 600 }}>Preço na pré-proposta</span>
+            <span className="small" style={{ fontWeight: 600 }}>{t('Preço na pré-proposta')}</span>
             <div className="seg">
-              <button className={s.formatoPreco === 'apartir' ? 'on' : ''} onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { formatoPreco: 'apartir' } })}>“A partir de”</button>
-              <button className={s.formatoPreco === 'faixa' ? 'on' : ''} onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { formatoPreco: 'faixa' } })}>Faixa de preço</button>
+              <button className={s.formatoPreco === 'apartir' ? 'on' : ''} onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { formatoPreco: 'apartir' } })}>{t('“A partir de”')}</button>
+              <button className={s.formatoPreco === 'faixa' ? 'on' : ''} onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { formatoPreco: 'faixa' } })}>{t('Faixa de preço')}</button>
             </div>
           </div>
           <div className="stack" style={{ gap: 6 }}>
-            <span className="small" style={{ fontWeight: 600 }}>O que o fornecedor vê do cliente final</span>
+            <span className="small" style={{ fontWeight: 600 }}>{t('O que o fornecedor vê do cliente final')}</span>
             <div className="seg">
-              <button className={s.clienteVisivel === 'regiao' ? 'on' : ''} onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { clienteVisivel: 'regiao' } })}>Só a região</button>
-              <button className={s.clienteVisivel === 'completo' ? 'on' : ''} onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { clienteVisivel: 'completo' } })}>Cliente e cidade</button>
+              <button className={s.clienteVisivel === 'regiao' ? 'on' : ''} onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { clienteVisivel: 'regiao' } })}>{t('Só a região')}</button>
+              <button className={s.clienteVisivel === 'completo' ? 'on' : ''} onClick={() => dispatch({ type: 'SET_SETTINGS', settings: { clienteVisivel: 'completo' } })}>{t('Cliente e cidade')}</button>
             </div>
           </div>
-          <p className="note">A escolha muda as telas na hora. Na versão final fica só a opção aprovada.</p>
+          <p className="note">{t('A escolha muda as telas na hora. Na versão final fica só a opção aprovada.')}</p>
         </div>
       )}
       {panel === 'roteiro' && (
-        <div className="decisions" role="dialog" aria-label="Roteiro da demonstração" style={{ width: 480 }}>
+        <div className="decisions" role="dialog" aria-label={t('Roteiro da demonstração')} style={{ width: 480 }}>
           <div className="between">
-            <h3>Roteiro da demonstração</h3>
-            <button className="link" onClick={() => setPanel(null)}>Fechar</button>
+            <h3>{t('Roteiro da demonstração')}</h3>
+            <button className="link" onClick={() => setPanel(null)}>{t('Fechar')}</button>
           </div>
           <ol className="script compact">
-            {SCRIPT.map(([t, d, to]) => (
-              <li key={t}>
-                <button onClick={() => { setPanel(null); go(to); }}><strong>{t}</strong><span>{d}</span></button>
+            {SCRIPT.map(([title, d, to]) => (
+              <li key={title}>
+                <button onClick={() => { setPanel(null); go(to); }}><strong>{t(title)}</strong><span>{t(d)}</span></button>
               </li>
             ))}
           </ol>
         </div>
       )}
-      <nav className="demo-bar no-print" aria-label="Navegação da demonstração">
-        <span className="tag">Demonstração</span>
-        <Link to="/" className={pathname === '/' ? 'active' : ''} onClick={() => dispatch({ type: 'LOGOUT' })}>Login</Link>
-        <button className={current === 'integrador' ? 'active' : ''} onClick={() => go('/integrador')}>Integrador</button>
+      <nav className="demo-bar no-print" aria-label={t('Navegação da demonstração')}>
+        <span className="tag">{t('Demonstração')}</span>
+        <Link to="/" className={pathname === '/' ? 'active' : ''} onClick={() => dispatch({ type: 'LOGOUT' })}>{t('Login')}</Link>
+        <button className={current === 'integrador' ? 'active' : ''} onClick={() => go('/integrador')}>{t('Integrador')}</button>
         <button className={current === 'saso' ? 'active' : ''} onClick={() => go('/saso')}>SASO</button>
-        <button className={current === 'fornecedor' ? 'active' : ''} onClick={() => go('/fornecedor')}>Fornecedor</button>
-        <Link to="/cronograma" className={pathname === '/cronograma' ? 'active' : ''}>Cronograma</Link>
+        <button className={current === 'fornecedor' ? 'active' : ''} onClick={() => go('/fornecedor')}>{t('Fornecedor')}</button>
+        <Link to="/cronograma" className={pathname === '/cronograma' ? 'active' : ''}>{t('Cronograma')}</Link>
         <span className="sep" />
-        <button onClick={() => toggle('roteiro')} aria-expanded={panel === 'roteiro'}>Roteiro</button>
-        <button onClick={() => toggle('decisoes')} aria-expanded={panel === 'decisoes'}>Pontos em aberto</button>
+        <button onClick={() => toggle('roteiro')} aria-expanded={panel === 'roteiro'}>{t('Roteiro')}</button>
+        <button onClick={() => toggle('decisoes')} aria-expanded={panel === 'decisoes'}>{t('Pontos em aberto')}</button>
         <button
           onClick={() => {
+            const msg = t('Demonstração reiniciada com os dados iniciais.');
             dispatch({ type: 'RESET' });
             setPanel(null);
             navigate('/');
-            setTimeout(() => toast('Demonstração reiniciada com os dados iniciais.', 'info'), 50);
+            setTimeout(() => toast(msg, 'info'), 50);
           }}
         >
-          Reiniciar
+          {t('Reiniciar')}
         </button>
       </nav>
     </>

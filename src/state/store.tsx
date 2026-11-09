@@ -1,3 +1,4 @@
+import type { Lang } from '../i18n';
 import { createContext, useCallback, useContext, useEffect, useReducer, useRef, useState, type ReactNode } from 'react';
 
 /* ---------- Tipos ---------- */
@@ -31,16 +32,18 @@ export const PO_FLOW = [
 
 export const INTEGRADOR = 'Integrador Exemplo Ltda';
 
+export const SITE_TYPES = ['Posto de combustível', 'Condomínio', 'Shopping', 'Hotel', 'Estacionamento', 'Garagem de frota', 'Supermercado'];
+
 export interface Lead { id: string; name: string; place: string; kind: string; hoursLeft: number; status: 'aguardando' | 'aceito' }
 export interface Premise { k: string; v: string }
-export interface FileRef { name: string; ver: string }
+export interface FileRef { name: string; ver: number; latest?: boolean; count?: number }
 export interface QueueItem {
   id: string; name: string; integrator: string; place: string; units: number; daysLeft: number;
   status: 'fila' | 'aprovado' | 'ajustes' | 'reprovado'; premises: Premise[]; files: FileRef[];
   supplierSupport?: boolean; comment?: string;
 }
 export interface Doc { name: string; cat: string; ver: number; validated?: boolean }
-export interface Access { who: string; what: string; when: string }
+export interface Access { who: string; what: string; when: string; vars?: Record<string, string | number> }
 export interface Payment { label: string; state: 'Pago' | 'Pendente' }
 export interface Project {
   id: string; name: string; place: string; units: number; proposal: string; step: number;
@@ -48,9 +51,9 @@ export interface Project {
 }
 export interface PO { id: string; region: string; full: string; kind: string; qty: number; status: number; eta: string; done: string }
 export interface LeadToDistribute { id: string; name: string; place: string; origin: string }
-export interface Notice { id: string; to: Profile; title: string; body: string; at: string; read: boolean }
+export interface Notice { id: string; to: Profile; title: string; body: string; vars?: Record<string, string | number>; at: string; read: boolean }
 export interface Protection { name: string; days: number }
-export interface Settings { formatoPreco: 'apartir' | 'faixa'; clienteVisivel: 'regiao' | 'completo'; lang: 'pt' | 'en' }
+export interface Settings { formatoPreco: 'apartir' | 'faixa'; clienteVisivel: 'regiao' | 'completo'; lang: Lang }
 
 export interface State {
   pipeline: number[];
@@ -76,7 +79,7 @@ export const stamp = () => { const d = new Date(); return `${today()} · ${pad(d
 export const addBusinessDays = (n: number) => {
   const d = new Date();
   while (n > 0) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) n--; }
-  return d.toLocaleDateString('pt-BR');
+  return d.toISOString();
 };
 
 /* ---------- Dados iniciais (ilustrativos, conforme o design v1) ---------- */
@@ -97,8 +100,8 @@ export const initialState = (): State => ({
         { k: 'Transformador', v: 'Não' }, { k: 'Aumento de carga', v: 'A avaliar' },
       ],
       files: [
-        { name: 'Projeto elétrico.pdf', ver: 'v3 · última versão' }, { name: 'Fotos do local.zip', ver: 'v1' },
-        { name: 'Foto do quadro.jpg', ver: 'v1' }, { name: 'Croqui.pdf', ver: 'v2' },
+        { name: 'Projeto elétrico.pdf', ver: 3, latest: true }, { name: 'Fotos do local.zip', ver: 1 },
+        { name: 'Foto do quadro.jpg', ver: 1 }, { name: 'Croqui.pdf', ver: 2 },
       ],
     },
     mkQueue('q2', 'Frota Transportes Alfa', 'Eletro Cerrado Ltda', 'Anápolis (GO)', 1, 0, 'Garagem de frota'),
@@ -181,7 +184,7 @@ function mkQueue(id: string, name: string, integrator: string, place: string, un
       { k: 'Vagas / eletropostos', v: `[VALOR] / ${units}` }, { k: 'Obra civil', v: 'Não' },
       { k: 'Transformador', v: 'Não' }, { k: 'Aumento de carga', v: 'Sim' },
     ],
-    files: [{ name: 'Projeto elétrico.pdf', ver: 'v1 · última versão' }, { name: 'Fotos do local.zip', ver: 'v1' }],
+    files: [{ name: 'Projeto elétrico.pdf', ver: 1, latest: true }, { name: 'Fotos do local.zip', ver: 1 }],
   };
 }
 
@@ -205,7 +208,7 @@ export type Action =
   | { type: 'SET_SETTINGS'; settings: Partial<Settings> }
   | { type: 'RESET' };
 
-const notice = (to: Profile, title: string, body: string): Notice => ({ id: uid(), to, title, body, at: stamp(), read: false });
+const notice = (to: Profile, title: string, body: string, vars?: Notice['vars']): Notice => ({ id: uid(), to, title, body, vars, at: stamp(), read: false });
 const bump = (arr: number[], i: number, d: number) => arr.map((n, j) => (j === i ? Math.max(0, n + d) : n));
 
 const EQUIP_EVENT: Record<number, string> = {
@@ -223,7 +226,7 @@ function reducer(s: State, a: Action): State {
         leads: s.leads.map(l => (l.id === a.id ? { ...l, status: 'aceito' } : l)),
         pipeline: bump(s.pipeline, 0, 1),
         protections: [{ name: lead.name, days: 45 }, ...s.protections.filter(p => p.name !== lead.name)],
-        notices: [notice('saso', 'Lead aceito', `${INTEGRADOR} aceitou o lead ${lead.name}.`), ...s.notices],
+        notices: [notice('saso', 'Lead aceito', '{integrator} aceitou o lead {name}.', { integrator: INTEGRADOR, name: lead.name }), ...s.notices],
       };
     }
     case 'REFUSE_LEAD': {
@@ -232,7 +235,7 @@ function reducer(s: State, a: Action): State {
         ...s,
         leads: s.leads.filter(l => l.id !== a.id),
         distribute: [...s.distribute, { id: uid(), name: lead.name, place: lead.place, origin: 'devolvido pelo integrador' }],
-        notices: [notice('saso', 'Lead devolvido', `${lead.name} voltou para redistribuição.`), ...s.notices],
+        notices: [notice('saso', 'Lead devolvido', '{name} voltou para redistribuição.', { name: lead.name }), ...s.notices],
       };
     }
     case 'PRE_PDF':
@@ -247,7 +250,7 @@ function reducer(s: State, a: Action): State {
         queue: [...s.queue, item],
         pipeline: bump(s.pipeline, 3, 1),
         preProposta: { pdf: true, enviada: true, prazo: addBusinessDays(5) },
-        notices: [notice('saso', 'Novo projeto na fila', `${a.name} · ${a.place} enviado por ${INTEGRADOR}.`), ...s.notices],
+        notices: [notice('saso', 'Novo projeto na fila', '{name} · {place} enviado por {integrator}.', { name: a.name, place: a.place, integrator: INTEGRADOR }), ...s.notices],
       };
     }
     case 'DECIDE': {
@@ -258,15 +261,15 @@ function reducer(s: State, a: Action): State {
       if (mine && a.decision === 'reprovado') pipeline = bump(bump(pipeline, 3, -1), 8, 1);
       const titles = { aprovado: 'Projeto aprovado', ajustes: 'Ajustes solicitados', reprovado: 'Projeto reprovado' };
       const bodies = {
-        aprovado: `${item.name}: a proposta final foi gerada e está disponível.`,
-        ajustes: `${item.name}: a engenharia pediu ajustes. "${a.comment}"`,
-        reprovado: `${item.name}: o projeto foi reprovado. "${a.comment}"`,
+        aprovado: '{name}: a proposta final foi gerada e está disponível.',
+        ajustes: '{name}: a engenharia pediu ajustes. “{comment}”',
+        reprovado: '{name}: o projeto foi reprovado. “{comment}”',
       };
       return {
         ...s,
         pipeline,
         queue: s.queue.map(q => (q.id === a.id ? { ...q, status: a.decision, comment: a.comment } : q)),
-        notices: mine ? [notice('integrador', titles[a.decision], bodies[a.decision]), ...s.notices] : s.notices,
+        notices: mine ? [notice('integrador', titles[a.decision], bodies[a.decision], { name: item.name, comment: a.comment }), ...s.notices] : s.notices,
       };
     }
     case 'SUPPLIER_SUPPORT': {
@@ -274,7 +277,7 @@ function reducer(s: State, a: Action): State {
       return {
         ...s,
         queue: s.queue.map(q => (q.id === a.id ? { ...q, supplierSupport: true } : q)),
-        notices: [notice('fornecedor', 'Apoio técnico solicitado', `${item.name} · ${item.place}: arquivos técnicos liberados.`), ...s.notices],
+        notices: [notice('fornecedor', 'Apoio técnico solicitado', '{name} · {place}: arquivos técnicos liberados.', { name: item.name, place: item.place }), ...s.notices],
       };
     }
     case 'ASSIGN_LEAD': {
@@ -284,14 +287,14 @@ function reducer(s: State, a: Action): State {
         ...s,
         distribute: s.distribute.filter(d => d.id !== a.id),
         leads: mine ? [...s.leads, { id: uid(), name: lead.name, place: lead.place, kind: 'Novo lead', hoursLeft: 48, status: 'aguardando' }] : s.leads,
-        notices: mine ? [notice('integrador', 'Novo lead para você', `${lead.name} · ${lead.place}. Você tem 48 h para aceitar.`), ...s.notices] : s.notices,
+        notices: mine ? [notice('integrador', 'Novo lead para você', '{name} · {place}. Você tem 48 h para aceitar.', { name: lead.name, place: lead.place }), ...s.notices] : s.notices,
       };
     }
     case 'FORWARD_LEAD':
       return {
         ...s,
         distribute: [...s.distribute, { id: uid(), name: a.name, place: a.place, origin: 'Fornecedor' }],
-        notices: [notice('saso', 'Lead encaminhado pelo fornecedor', `${a.name} · ${a.place} (${a.kind}).`), ...s.notices],
+        notices: [notice('saso', 'Lead encaminhado pelo fornecedor', '{name} · {place} ({kind}).', { name: a.name, place: a.place, kind: a.kind }), ...s.notices],
       };
     case 'ADVANCE_PO': {
       const po = s.pos.find(p => p.id === a.id); if (!po) return s;
@@ -301,7 +304,7 @@ function reducer(s: State, a: Action): State {
         const dates = [...p.dates];
         let step = p.step;
         if (delivered && step === 3) { dates[3] = today(); step = 4; }
-        return { ...p, step, dates, access: [{ who: 'Operações SASO', what: `Atualizou o equipamento: ${EQUIP_EVENT[a.status]}`, when: stamp() }, ...p.access] };
+        return { ...p, step, dates, access: [{ who: 'Operações SASO', what: 'Atualizou o equipamento: {event}', vars: { event: EQUIP_EVENT[a.status] }, when: stamp() }, ...p.access] };
       });
       const linked = s.projects.find(p => p.poId === a.id);
       return {
@@ -309,8 +312,8 @@ function reducer(s: State, a: Action): State {
         pos: s.pos.map(p => (p.id === a.id ? { ...p, status: a.status, done: today() } : p)),
         projects,
         notices: linked
-          ? [notice('integrador', 'Status do equipamento', `${linked.name}: ${EQUIP_EVENT[a.status]}.`), notice('saso', 'PO atualizada pelo fornecedor', `${po.id}: ${PO_FLOW[a.status]}.`), ...s.notices]
-          : [notice('saso', 'PO atualizada pelo fornecedor', `${po.id}: ${PO_FLOW[a.status]}.`), ...s.notices],
+          ? [notice('integrador', 'Status do equipamento', '{name}: {event}.', { name: linked.name, event: EQUIP_EVENT[a.status] }), notice('saso', 'PO atualizada pelo fornecedor', '{id}: {status}.', { id: po.id, status: PO_FLOW[a.status] }), ...s.notices]
+          : [notice('saso', 'PO atualizada pelo fornecedor', '{id}: {status}.', { id: po.id, status: PO_FLOW[a.status] }), ...s.notices],
       };
     }
     case 'UPLOAD_DOC':
@@ -323,11 +326,11 @@ function reducer(s: State, a: Action): State {
           const docs = existing
             ? p.docs.map(d => (d.name === a.name ? { ...d, ver, validated: false } : d))
             : [...p.docs, { name: a.name, cat: a.cat, ver }];
-          return { ...p, docs, access: [{ who: 'Você', what: `Enviou ${a.name} v${ver}`, when: stamp() }, ...p.access] };
+          return { ...p, docs, access: [{ who: 'Você', what: 'Enviou {name} v{ver}', vars: { name: a.name, ver }, when: stamp() }, ...p.access] };
         }),
       };
     case 'DOC_ALERT_RESOLVED':
-      return { ...s, docAlert: false, notices: [notice('saso', 'Documento para análise', `${INTEGRADOR} enviou o certificado NR-35 atualizado.`), ...s.notices] };
+      return { ...s, docAlert: false, notices: [notice('saso', 'Documento para análise', '{integrator} enviou o certificado NR-35 atualizado.', { integrator: INTEGRADOR }), ...s.notices] };
     case 'READ_NOTICES':
       return { ...s, notices: s.notices.map(n => (n.to === a.to ? { ...n, read: true } : n)) };
     case 'SET_SETTINGS':
@@ -338,14 +341,16 @@ function reducer(s: State, a: Action): State {
     }
     case 'LOGOUT':
       return { ...s, session: null };
-    case 'RESET':
-      return initialState();
+    case 'RESET': {
+      const fresh = initialState();
+      return { ...fresh, settings: { ...fresh.settings, lang: s.settings.lang } };
+    }
   }
 }
 
 /* ---------- Provider, persistência e avisos rápidos (toasts) ---------- */
 
-const KEY = 'saso-energy-demo-v3';
+const KEY = 'saso-energy-demo-v4';
 
 function load(): State {
   try {

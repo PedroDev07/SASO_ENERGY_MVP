@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Brand } from '../components/ui';
+import { Brand, LangSwitch } from '../components/ui';
 import { PROFILES, useStore, type Profile } from '../state/store';
+import { useT } from '../i18n';
 
 const OPTIONS: { id: Profile; title: string; text: string }[] = [
   { id: 'integrador', title: 'Integrador', text: 'Vendas, propostas e projetos' },
@@ -11,12 +12,13 @@ const OPTIONS: { id: Profile; title: string; text: string }[] = [
 
 export default function Login() {
   const { dispatch } = useStore();
+  const { t } = useT();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile>('integrador');
   const [email, setEmail] = useState(PROFILES.integrador.email);
   const [senha, setSenha] = useState('demonstracao');
   const [show, setShow] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<'' | 'email' | 'senha'>('');
   const [loading, setLoading] = useState(false);
   const [forgot, setForgot] = useState(false);
 
@@ -24,8 +26,8 @@ export default function Login() {
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!/^\S+@\S+\.\S+$/.test(email)) { setError('Informe um e-mail válido.'); return; }
-    if (senha.length < 6) { setError('A senha precisa ter pelo menos 6 caracteres.'); return; }
+    if (!/^\S+@\S+\.\S+$/.test(email)) { setError('email'); return; }
+    if (senha.length < 6) { setError('senha'); return; }
     setError('');
     setLoading(true);
     setTimeout(() => {
@@ -34,30 +36,33 @@ export default function Login() {
     }, 450);
   };
 
+  const title = t(OPTIONS.find(o => o.id === profile)!.title);
+
   return (
     <div className="login">
       <section className="login-art">
         <Brand />
         <div>
-          <h1>Venda, valide e entregue eletropostos em um só lugar.</h1>
-          <p>Integradores, engenharia e operação trabalhando no mesmo fluxo, cada um vendo apenas o que deve ver.</p>
+          <h1>{t('Venda, valide e entregue eletropostos em um só lugar.')}</h1>
+          <p>{t('Integradores, engenharia e operação trabalhando no mesmo fluxo, cada um vendo apenas o que deve ver.')}</p>
         </div>
         <ul>
-          <li><strong>45 dias</strong><span>de proteção para cada oportunidade</span></li>
-          <li><strong>48 h</strong><span>para aceitar um lead</span></li>
-          <li><strong>5 dias úteis</strong><span>para a validação técnica</span></li>
+          <li><strong>{t('45 dias')}</strong><span>{t('de proteção para cada oportunidade')}</span></li>
+          <li><strong>{t('48 h')}</strong><span>{t('para aceitar um lead')}</span></li>
+          <li><strong>{t('5 dias úteis')}</strong><span>{t('para a validação técnica')}</span></li>
         </ul>
       </section>
 
       <section className="login-form">
+        <div className="login-lang"><LangSwitch /></div>
         <form onSubmit={submit} noValidate>
           <div className="mobile-only" style={{ marginBottom: 8 }}><Brand /></div>
           <div>
-            <h2 className="display" style={{ fontSize: 26 }}>Entrar na plataforma</h2>
-            <p className="muted" style={{ margin: '4px 0 0' }}>Escolha seu tipo de acesso.</p>
+            <h2 className="display" style={{ fontSize: 26 }}>{t('Entrar na plataforma')}</h2>
+            <p className="muted" style={{ margin: '4px 0 0' }}>{t('Escolha seu tipo de acesso.')}</p>
           </div>
 
-          <div className="profile-pick" role="radiogroup" aria-label="Tipo de acesso">
+          <div className="profile-pick" role="radiogroup" aria-label={t('Tipo de acesso')}>
             {OPTIONS.map(o => (
               <button
                 type="button"
@@ -68,34 +73,34 @@ export default function Login() {
                 onClick={() => pick(o.id)}
               >
                 <span className="dot" />
-                <strong>{o.title}</strong>
-                <span>{o.text}</span>
+                <strong>{t(o.title)}</strong>
+                <span>{t(o.text)}</span>
               </button>
             ))}
           </div>
 
           <label className="field">
-            <span>E-mail</span>
-            <input className={`input ${error.includes('e-mail') ? 'err' : ''}`} type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} />
+            <span>{t('E-mail')}</span>
+            <input className={`input ${error === 'email' ? 'err' : ''}`} type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} />
           </label>
           <label className="field">
             <span className="between" style={{ fontWeight: 600 }}>
-              Senha
-              <button type="button" className="link small" onClick={() => setForgot(true)}>Esqueci minha senha</button>
+              {t('Senha')}
+              <button type="button" className="link small" onClick={() => setForgot(true)}>{t('Esqueci minha senha')}</button>
             </span>
             <div style={{ position: 'relative' }}>
-              <input className={`input ${error.includes('senha') ? 'err' : ''}`} type={show ? 'text' : 'password'} autoComplete="current-password" value={senha} onChange={e => setSenha(e.target.value)} style={{ paddingRight: 72 }} />
-              <button type="button" className="link small" onClick={() => setShow(s => !s)} style={{ position: 'absolute', right: 12, top: 13 }}>{show ? 'Ocultar' : 'Mostrar'}</button>
+              <input className={`input ${error === 'senha' ? 'err' : ''}`} type={show ? 'text' : 'password'} autoComplete="current-password" value={senha} onChange={e => setSenha(e.target.value)} style={{ paddingRight: 80 }} />
+              <button type="button" className="link small" onClick={() => setShow(s => !s)} style={{ position: 'absolute', right: 12, top: 13 }}>{show ? t('Ocultar') : t('Mostrar')}</button>
             </div>
           </label>
-          {error && <span className="err-msg">{error}</span>}
-          {forgot && <p className="note" style={{ color: 'var(--green-dark)' }}>Enviamos um link de redefinição para {email || 'seu e-mail'}.</p>}
+          {error && <span className="err-msg">{error === 'email' ? t('Informe um e-mail válido.') : t('A senha precisa ter pelo menos 6 caracteres.')}</span>}
+          {forgot && <p className="note" style={{ color: 'var(--green-dark)' }}>{t('Enviamos um link de redefinição para {email}.', { email: email || t('seu e-mail') })}</p>}
 
           <button className="btn primary" type="submit" disabled={loading} style={{ width: '100%' }}>
-            {loading ? 'Entrando…' : `Entrar como ${OPTIONS.find(o => o.id === profile)!.title}`}
+            {loading ? t('Entrando…') : t('Entrar como {perfil}', { perfil: title })}
           </button>
           <p className="note" style={{ textAlign: 'center' }}>
-            {profile === 'integrador' ? 'Ainda não é credenciado? Fale com a SASO para iniciar o credenciamento.' : 'Acesso restrito a usuários autorizados.'}
+            {profile === 'integrador' ? t('Ainda não é credenciado? Fale com a SASO para iniciar o credenciamento.') : t('Acesso restrito a usuários autorizados.')}
           </p>
         </form>
       </section>

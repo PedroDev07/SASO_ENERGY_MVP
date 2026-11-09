@@ -36,9 +36,18 @@ npm run build        # build normal em dist/
 - O estado fica salvo no navegador (localStorage). Use "Reiniciar" antes de apresentar.
 - Dados ilustrativos. Preços aparecem como `[PREÇO]`/`[VALOR]` até a definição comercial.
 
+## Idiomas
+
+Português, inglês e chinês, escolhidos no seletor do topo (também no login e no cronograma).
+
+- Os textos ficam em `src/dict.ts` (chave = texto em português → [inglês, chinês]).
+- Ao criar um texto novo na interface, use `t('Texto em português')` e adicione a tradução no `dict.ts`.
+- `npm run i18n:check` aponta textos sem tradução e variáveis que não batem entre os idiomas.
+
 ## Estrutura
 
 - `src/state/store.tsx`: dados iniciais, ações e regras que ligam os perfis
 - `src/pages/`: uma página por tela
 - `src/components/ui.tsx`: barra de demo, avisos, modal, menus
 - `src/styles.css`: cores e componentes do design (Inter + Space Grotesk)
+- `src/i18n.ts` e `src/dict.ts`: tradução PT / EN / 中文

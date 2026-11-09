@@ -407,3 +407,21 @@ td { border-top: 1px solid var(--line-2); padding: 12px 12px 12px 0; vertical-al
   h1 { font-size: 24px; }
   .demo-bar .tag { display: none; }
 }
+
+/* ---------- Idioma ---------- */
+
+body:lang(zh-CN), :root:lang(zh-CN) body { font-family: Inter, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif; }
+:root:lang(zh-CN) { --display: 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif; }
+.lang {
+  display: inline-flex; align-items: center; gap: 2px; padding: 3px 3px 3px 10px; border-radius: 10px;
+  background: #fff; border: 1px solid var(--input); color: var(--muted-2); height: 44px;
+}
+.lang svg { margin-right: 4px; flex: none; }
+.lang button {
+  border: 0; background: none; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--muted-2);
+  padding: 0 10px; height: 36px; border-radius: 8px; min-width: 40px;
+}
+.lang button:hover { background: var(--gray-soft); }
+.lang button.on { background: var(--nav); color: #fff; }
+.login-form { position: relative; }
+.login-lang { position: absolute; top: 20px; right: 24px; }

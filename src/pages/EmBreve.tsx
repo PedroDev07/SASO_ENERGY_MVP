@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { AppShell } from '../components/ui';
 import { PROFILES, type Profile } from '../state/store';
+import { useT } from '../i18n';
 
 type Info = { title: string; phase: 1 | 2 | 3; text: string };
 
@@ -38,14 +39,15 @@ const PHASE = {
 
 export default function EmBreve({ profile }: { profile: Profile }) {
   const { secao = '' } = useParams();
+  const { t } = useT();
   const s = SECTIONS[profile][secao];
   const home = PROFILES[profile].home;
 
   if (!s) {
     return (
       <AppShell profile={profile}>
-        <h1>Página não encontrada</h1>
-        <Link to={home} className="link">Voltar ao início</Link>
+        <h1>{t('Página não encontrada')}</h1>
+        <Link to={home} className="link">{t('Voltar ao início')}</Link>
       </AppShell>
     );
   }
@@ -53,14 +55,14 @@ export default function EmBreve({ profile }: { profile: Profile }) {
   const ph = PHASE[s.phase];
   return (
     <AppShell profile={profile}>
-      <h1>{s.title}</h1>
+      <h1>{t(s.title)}</h1>
       <section className="card pad-lg" style={{ maxWidth: 640, borderTop: `6px solid ${ph.color}` }}>
-        <span className="chip t-gray">Entra na {ph.label}</span>
-        <p style={{ margin: 0, fontSize: 15 }}>{s.text}</p>
-        <p className="note">Esta área não faz parte das telas do design v1. Ela entra conforme o cronograma de entrega.</p>
+        <span className="chip t-gray">{t('Entra na {fase}', { fase: t(ph.label) })}</span>
+        <p style={{ margin: 0, fontSize: 15 }}>{t(s.text)}</p>
+        <p className="note">{t('Esta área não faz parte das telas do design v1. Ela entra conforme o cronograma de entrega.')}</p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link to="/cronograma" className="btn">Ver cronograma</Link>
-          <Link to={home} className="btn primary">Voltar ao início</Link>
+          <Link to="/cronograma" className="btn">{t('Ver cronograma')}</Link>
+          <Link to={home} className="btn primary">{t('Voltar ao início')}</Link>
         </div>
       </section>
     </AppShell>

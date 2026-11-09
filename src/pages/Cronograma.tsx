@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { LangSwitch } from '../components/ui';
+import { useT } from '../i18n';
 
 const G = '#0B7A4B', B = '#1F4FBF', A = '#A86A00', X = '#5B675F';
 
@@ -39,16 +41,20 @@ const PHASES = [
 const GRID = '300px repeat(13, minmax(0, 1fr))';
 
 export default function Cronograma() {
+  const { t } = useT();
   const [focus, setFocus] = useState<string | null>(null);
   const dim = (c: string) => (focus && focus !== c ? 0.18 : 1);
 
   return (
     <div className="page">
       <main className="main centered" style={{ padding: 32, gap: 22 }}>
-        <header>
-          <div className="display" style={{ fontWeight: 700, fontSize: 16, color: 'var(--green)' }}>SASO ENERGY</div>
-          <h1 style={{ marginTop: 2, fontSize: 30 }}>Cronograma de entrega: 3 fases, 1 por mês</h1>
-          <p className="sub" style={{ marginTop: 6 }}>Plataforma em operação em 13 semanas. Cada fase termina com uma demonstração e o aceite da SASO.</p>
+        <header className="between" style={{ alignItems: 'flex-start' }}>
+          <div>
+            <div className="display" style={{ fontWeight: 700, fontSize: 16, color: 'var(--green)' }}>SASO ENERGY</div>
+            <h1 style={{ marginTop: 2, fontSize: 30 }}>{t('Cronograma de entrega: 3 fases, 1 por mês')}</h1>
+            <p className="sub" style={{ marginTop: 6 }}>{t('Plataforma em operação em 13 semanas. Cada fase termina com uma demonstração e o aceite da SASO.')}</p>
+          </div>
+          <LangSwitch />
         </header>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -62,30 +68,30 @@ export default function Cronograma() {
                 border: `1px solid ${focus === c ? c : 'transparent'}`, background: focus === c ? '#fff' : 'transparent',
               }}
             >
-              <span style={{ width: 14, height: 14, borderRadius: 4, background: c }} />{l}
+              <span style={{ width: 14, height: 14, borderRadius: 4, background: c }} />{t(l)}
             </button>
           ))}
-          {focus && <button className="link small" onClick={() => setFocus(null)}>mostrar todas</button>}
+          {focus && <button className="link small" onClick={() => setFocus(null)}>{t('mostrar todas')}</button>}
         </div>
 
         <section aria-label="Gráfico de cronograma" className="card" style={{ overflowX: 'auto', display: 'block' }}>
           <div style={{ minWidth: 960, display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'grid', gridTemplateColumns: GRID }}>
               <div />
-              <div style={{ gridColumn: '2 / 6', textAlign: 'center', padding: 8, background: 'var(--green-soft)', color: 'var(--green-dark)', fontWeight: 600, borderRadius: '8px 0 0 8px' }}>Mês 1</div>
-              <div style={{ gridColumn: '6 / 10', textAlign: 'center', padding: 8, background: 'var(--blue-soft)', color: 'var(--blue-dark)', fontWeight: 600 }}>Mês 2</div>
-              <div style={{ gridColumn: '10 / 15', textAlign: 'center', padding: 8, background: 'var(--amber-soft)', color: 'var(--amber-text)', fontWeight: 600, borderRadius: '0 8px 8px 0' }}>Mês 3</div>
+              <div style={{ gridColumn: '2 / 6', textAlign: 'center', padding: 8, background: 'var(--green-soft)', color: 'var(--green-dark)', fontWeight: 600, borderRadius: '8px 0 0 8px' }}>{t('Mês 1')}</div>
+              <div style={{ gridColumn: '6 / 10', textAlign: 'center', padding: 8, background: 'var(--blue-soft)', color: 'var(--blue-dark)', fontWeight: 600 }}>{t('Mês 2')}</div>
+              <div style={{ gridColumn: '10 / 15', textAlign: 'center', padding: 8, background: 'var(--amber-soft)', color: 'var(--amber-text)', fontWeight: 600, borderRadius: '0 8px 8px 0' }}>{t('Mês 3')}</div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: GRID, marginTop: 4, color: 'var(--muted)', fontSize: 12 }}>
               <div />
-              {Array.from({ length: 13 }, (_, i) => <div key={i} style={{ textAlign: 'center', padding: '4px 0' }}>S{i + 1}</div>)}
+              {Array.from({ length: 13 }, (_, i) => <div key={i} style={{ textAlign: 'center', padding: '4px 0' }}>{t('S{n}', { n: i + 1 })}</div>)}
             </div>
 
             {ROWS.map(([label, s, e, c], i) => (
               <div key={label} style={{ display: 'grid', gridTemplateColumns: GRID, alignItems: 'center', minHeight: 36, borderTop: '1px solid var(--line-2)', opacity: dim(c), transition: 'opacity .2s' }}>
-                <div style={{ padding: '6px 8px' }}>{label}</div>
+                <div style={{ padding: '6px 8px' }}>{t(label)}</div>
                 <div
-                  title={`${label}: semanas ${s} a ${e}`}
+                  title={t('{label}: semanas {s} a {e}', { label: t(label), s, e })}
                   style={{
                     gridColumn: `${s + 1} / ${e + 2}`, height: 20, borderRadius: 6, background: c, margin: '0 2px',
                     transformOrigin: 'left', animation: `grow .7s cubic-bezier(.2,.8,.2,1) ${i * 0.03}s both`,
@@ -95,12 +101,12 @@ export default function Cronograma() {
             ))}
 
             <div style={{ display: 'grid', gridTemplateColumns: GRID, alignItems: 'start', borderTop: '2px solid var(--ink)', marginTop: 4, paddingTop: 8 }}>
-              <div style={{ padding: '6px 8px', fontWeight: 700 }}>Marcos de aceite</div>
+              <div style={{ padding: '6px 8px', fontWeight: 700 }}>{t('Marcos de aceite')}</div>
               {MILESTONES.map(m => (
                 <div key={m.title} style={{ gridColumn: m.col, textAlign: 'center' }}>
                   <div style={{ width: 18, height: 18, background: 'var(--ink)', transform: 'rotate(45deg)', margin: '4px auto 10px' }} />
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{m.title}</div>
-                  <div className="muted small">{m.sub}</div>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{t(m.title)}</div>
+                  <div className="muted small">{t(m.sub)}</div>
                 </div>
               ))}
             </div>
@@ -110,14 +116,14 @@ export default function Cronograma() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
           {PHASES.map(p => (
             <section key={p.title} className="card" style={{ flex: '1 1 340px', borderTop: `6px solid ${p.color}`, padding: 18, gap: 8, opacity: dim(p.key), transition: 'opacity .2s' }}>
-              <h2 style={{ color: p.color }}>{p.title}</h2>
-              <div><strong>A SASO recebe:</strong> {p.gets}</div>
-              <div><strong>Precisa estar decidido:</strong> {p.needs}</div>
+              <h2 style={{ color: p.color }}>{t(p.title)}</h2>
+              <div><strong>{t('A SASO recebe:')}</strong> {t(p.gets)}</div>
+              <div><strong>{t('Precisa estar decidido:')}</strong> {t(p.needs)}</div>
             </section>
           ))}
         </div>
 
-        <p className="note">Semanas e divisão de parcelas são uma proposta para discussão. O cronograma assume a fase de detalhamento nas semanas 1 e 2 e depende das definições dos pontos em aberto.</p>
+        <p className="note">{t('Semanas e divisão de parcelas são uma proposta para discussão. O cronograma assume a fase de detalhamento nas semanas 1 e 2 e depende das definições dos pontos em aberto.')}</p>
       </main>
     </div>
   );

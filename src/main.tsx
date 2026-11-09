@@ -10,6 +10,7 @@ import '@fontsource/space-grotesk/latin-700.css';
 import './styles.css';
 import { PROFILES, StoreProvider, useStore, type Profile } from './state/store';
 import { DemoBar, Toasts } from './components/ui';
+import { LOCALE, useT } from './i18n';
 import Login from './pages/Login';
 import Office from './pages/integrador/Office';
 import PreProposta from './pages/integrador/PreProposta';
@@ -30,11 +31,15 @@ const TITLES: [string, string][] = [
 
 function ScrollAndTitle() {
   const { pathname, hash } = useLocation();
+  const { t, lang } = useT();
   useEffect(() => {
     if (!hash) window.scrollTo(0, 0);
-    const t = TITLES.find(([p]) => pathname.startsWith(p))?.[1];
-    document.title = t ? `${t} · SASO ENERGY` : 'SASO ENERGY · Entrar';
   }, [pathname, hash]);
+  useEffect(() => {
+    const title = TITLES.find(([p]) => pathname.startsWith(p))?.[1];
+    document.title = title ? `${t(title)} · SASO ENERGY` : `SASO ENERGY · ${t('Entrar')}`;
+    document.documentElement.lang = LOCALE[lang];
+  }, [pathname, t, lang]);
   return null;
 }
 
