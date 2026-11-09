@@ -1,0 +1,6 @@
+node_modules
+dist
+.DS_Store
+*.tsbuildinfo
+# Arquivo do design original (contém o nome do fornecedor; não faz parte do app)
+Plataforma SASO*.html
